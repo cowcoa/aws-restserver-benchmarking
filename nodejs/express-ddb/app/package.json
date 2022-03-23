@@ -1,0 +1,22 @@
+{
+  "name": "nodejs-express-ddb",
+  "version": "1.0.0",
+  "description": "rest server for x86_64 and arm64 benchmarking.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Cow",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^1.18.10"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.440.0",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "moment-timezone": "^0.5.34",
+    "rimraf": "^2.6.3",
+    "seedrandom": "^3.0.1"
+  }
+}
