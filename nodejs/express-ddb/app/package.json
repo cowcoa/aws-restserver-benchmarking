@@ -6,17 +6,15 @@
   "scripts": {
     "start": "node server.js"
   },
-  "author": "Cow",
+  "author": "zxaws@amazon.com",
   "license": "ISC",
   "devDependencies": {
     "nodemon": "^1.18.10"
   },
   "dependencies": {
-    "aws-sdk": "^2.440.0",
-    "body-parser": "^1.18.3",
-    "express": "^4.16.4",
-    "moment-timezone": "^0.5.34",
-    "rimraf": "^2.6.3",
-    "seedrandom": "^3.0.1"
+    "aws-sdk": "^2.1099.0",
+    "body-parser": "^1.19.2",
+    "express": "^4.17.3",
+    "moment-timezone": "^0.5.34"
   }
 }
