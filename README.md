@@ -1,5 +1,5 @@
 # aws-restserver-benchmarking
-Example REST server projects for benchmarking on x86 and arm64.
+Example REST server projects for benchmarking on x86_64 and arm64.
 
 ## Prerequisites
 1. Install and configure AWS CLI environment:<br />
