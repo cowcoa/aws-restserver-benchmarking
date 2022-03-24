@@ -11,6 +11,21 @@ fi
 TABLE_NAME="$(jq -r .context.tableName ${SHELL_PATH}/../cdk.json)"
 GSI_NAME="$(jq -r .context.gsiName ${SHELL_PATH}/../cdk.json)"
 
-pushd ${SHELL_PATH} &> /dev/null
-AWS_REGION=${REGION_CODE} DDB_TABLE_NAME=${TABLE_NAME} DDB_GSI_NAME=${GSI_NAME} npm start
-popd &> /dev/null
+# Run rest server by node
+#pushd ${SHELL_PATH} &> /dev/null
+#AWS_REGION=${REGION_CODE} DDB_TABLE_NAME=${TABLE_NAME} DDB_GSI_NAME=${GSI_NAME} npm start
+#popd &> /dev/null
+
+# Run rest server by container
+AWS_ACCESS_KEY_ID=$(aws --profile default configure get aws_access_key_id)
+AWS_SECRET_ACCESS_KEY=$(aws --profile default configure get aws_secret_access_key)
+
+image_repo="$(jq -r .context.imageRepoName ${SHELL_PATH}/../cdk.json)"
+
+docker run \
+        -e AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+        -e AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+        -e AWS_REGION=$REGION_CODE \
+        -e DDB_TABLE_NAME=$TABLE_NAME \
+        -e DDB_GSI_NAME=$GSI_NAME \
+        -p 8387:8387 ${image_repo}:latest

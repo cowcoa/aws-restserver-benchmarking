@@ -40,3 +40,15 @@ func GsiName(scope constructs.Construct) string {
 
 	return gsiName
 }
+
+// DO NOT modify this function, change ECR repository name by 'cdk.json/context/imageRepoName'.
+func EcrRepoName(scope constructs.Construct) string {
+	ecrRepoName := "MyRepository"
+
+	ctxValue := scope.Node().TryGetContext(jsii.String("imageRepoName"))
+	if v, ok := ctxValue.(string); ok {
+		ecrRepoName = v
+	}
+
+	return ecrRepoName
+}

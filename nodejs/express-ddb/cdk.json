@@ -27,6 +27,7 @@
     "stackName": "RESTBenchmark-NodeExpressDDB",
     "deploymentRegion": "",
     "tableName": "RESTBenchmark-ChatTable",
-    "gsiName": "ChatTableGSI"
+    "gsiName": "ChatTableGSI",
+    "imageRepoName": "restbenchmark-nodeexpressddb"
   }
 }

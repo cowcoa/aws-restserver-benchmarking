@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsecr"
 
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
@@ -59,6 +60,21 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 			Type: awsdynamodb.AttributeType_STRING,
 		},
 		ProjectionType: awsdynamodb.ProjectionType_ALL,
+	})
+
+	// Create ECR repository
+	repo := awsecr.NewRepository(stack, jsii.String(config.EcrRepoName(stack)), &awsecr.RepositoryProps{
+		RepositoryName:     jsii.String(config.EcrRepoName(stack)),
+		RemovalPolicy:      awscdk.RemovalPolicy_DESTROY,
+		ImageTagMutability: awsecr.TagMutability_MUTABLE,
+		ImageScanOnPush:    jsii.Bool(false),
+	})
+
+	awscdk.NewCfnOutput(stack, jsii.String("EcrRepositoryName"), &awscdk.CfnOutputProps{
+		Value: repo.RepositoryName(),
+	})
+	awscdk.NewCfnOutput(stack, jsii.String("EcrRepositoryUri"), &awscdk.CfnOutputProps{
+		Value: repo.RepositoryUri(),
 	})
 
 	return stack
