@@ -27,3 +27,9 @@ Example REST server projects for benchmarking on x86 and arm64.
 [Install NVM]: <https://github.com/nvm-sh/nvm#install--update-script>
 [Download and Install]: <https://go.dev/doc/install>
 [Install Docker Engine]: <https://docs.docker.com/engine/install/>
+
+## Examples
+
+This page contains list of examples.
+
+- [Node.js+Express+DynamoDB](./nodejs/express-ddb) - Simple REST server, do Put and Query actions with DynamoDB.
