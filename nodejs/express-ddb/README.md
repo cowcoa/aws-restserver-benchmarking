@@ -34,10 +34,6 @@ Run the following command to launch rest server in docker container:<br />
   ```sh
   cd app/
   ./run.sh
-  
-  > nodejs-express-ddb@1.0.0 start
-  > node server.js
-  
   Server running on port 8387
   ```
 You can POST user comment by command:
