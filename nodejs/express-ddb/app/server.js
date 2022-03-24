@@ -1,28 +1,27 @@
 'use strict';
 
 // Depend npm modules
-const moment = require('moment-timezone');
+const AWS = require('aws-sdk');
 const express = require("express");
 const bodyParser = require("body-parser");
-const AWS = require('aws-sdk');
+const moment = require('moment-timezone');
 // Global objects, variables and init functions
+const dynamodb = new AWS.DynamoDB();
 const app = express();
 const router = express.Router();
-const dynamodb = new AWS.DynamoDB();
 // Server port
 const HTTP_PORT = 8387;
-// DDB Info
+// AWS deployment resources info
 const DDB_TABLE_NAME = process.env.DDB_TABLE_NAME
 const DDB_GSI_NAME = process.env.DDB_GSI_NAME
 const AWS_REGION = process.env.AWS_REGION
-
+// Global configuration
 AWS.config.update({region:AWS_REGION});
-
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-async function putChatInfo(name, comment, chatRoom) {
-    console.log('Put chat info with name: ' + name + ', comment: ' + comment + ', chatRoom: ' + chatRoom);
+// Put chat record into AWS DynamoDB.
+async function putChatRecord(name, comment, chatRoom) {
     return new Promise((resolve, reject) => {
         let currentTime = moment().tz("Asia/Shanghai");
         let registerDate = currentTime.format();
@@ -45,12 +44,11 @@ async function putChatInfo(name, comment, chatRoom) {
                 resolve();
             }
         });
-
     });
 }
 
+// Query chat records of the same chat room from AWS DynamoDB.
 async function queryChatRecords(chatRoom) {
-    console.log('Get chat info with chatRoom: ' + chatRoom);
     return new Promise((resolve, reject) => {
         let queryParams = {
             ExpressionAttributeValues: {
@@ -65,7 +63,6 @@ async function queryChatRecords(chatRoom) {
             if (err) {
                 reject(err);
             } else {
-                console.log('response of queryChatRecords.query: ' + JSON.stringify(data));
                 resolve(data);
             }
         });
@@ -74,27 +71,18 @@ async function queryChatRecords(chatRoom) {
 
 // Request pre-process function
 router.use(function (req, res, next) {
+    /*
     console.log('Time:', Date.now());
     console.log('DDB_TABLE_NAME:', DDB_TABLE_NAME);
     console.log('DDB_GSI_NAME:', DDB_GSI_NAME);
     console.log('AWS_REGION:', AWS_REGION);
-    
-    /*
-    // Register disconnection callback
-    req.on("close", function() {
-        // request closed unexpectedly
-        console.log('request closed unexpectedly');
-    });
-    req.on("end", function() {
-        // request ended normally
-        console.log('request ended normally');
-    });
     */
     
     console.log('Received request: ' + req.method + ' '+ req.originalUrl + ' ' + JSON.stringify(req.body));
     next('route');
 });
 
+// POST /put resource processing function.
 router.post('/put', async (req, res, next) => {
     if (req.get('Content-Type') != 'application/json') {
         console.log('Invalid Content-Type header: ' + req.get('Content-Type'));
@@ -111,7 +99,9 @@ router.post('/put', async (req, res, next) => {
     }
 
     try {
-        await putChatInfo(req.body.name, req.body.comment, req.body.chatRoom);
+        await putChatRecord(req.body.name, req.body.comment, req.body.chatRoom);
+
+        res.status(201).send();
     }
     catch (err) {
         console.error('Error: ' + err.message);
@@ -120,10 +110,9 @@ router.post('/put', async (req, res, next) => {
         }
         res.status(err.statusCode).json({ error: err.message });
     }
-
-    res.status(201).end();
 });
 
+// GET /get resource processing function.
 router.get('/get', async (req, res, next) => {
     if (typeof req.query.chatroom !== 'string') {
         console.log('Invalid query parameter');
@@ -133,9 +122,9 @@ router.get('/get', async (req, res, next) => {
 
     try {
         let result = await queryChatRecords(req.query.chatroom);
+
         let chatRecords = [];
         result.Items.forEach(element => {
-            console.log('chatRecord: ' + JSON.stringify(element));
             let chatRecord = {
                 name: element.Name.S,
                 comment: element.Comment.S,
@@ -143,6 +132,7 @@ router.get('/get', async (req, res, next) => {
             }
             chatRecords.push(chatRecord);
         });
+
         res.status(200).json(chatRecords);
     }
     catch (err) {
