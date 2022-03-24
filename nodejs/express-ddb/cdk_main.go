@@ -29,10 +29,10 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 	// name(PK), time(SK),                  comment, chat_room
 	// string    string(micro sec unixtime)	string   string
 	chatTable := awsdynamodb.NewTable(stack, jsii.String(config.TableName(stack)), &awsdynamodb.TableProps{
-		TableName:     jsii.String(config.TableName(stack)),
-		BillingMode:   awsdynamodb.BillingMode_PROVISIONED,
-		ReadCapacity:  jsii.Number(1),
-		WriteCapacity: jsii.Number(1),
+		TableName:   jsii.String(config.TableName(stack)),
+		BillingMode: awsdynamodb.BillingMode_PAY_PER_REQUEST,
+		// ReadCapacity:  jsii.Number(1),
+		// WriteCapacity: jsii.Number(1),
 		RemovalPolicy: awscdk.RemovalPolicy_DESTROY,
 		PartitionKey: &awsdynamodb.Attribute{
 			Name: jsii.String("Name"),
@@ -60,6 +60,8 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 			Type: awsdynamodb.AttributeType_STRING,
 		},
 		ProjectionType: awsdynamodb.ProjectionType_ALL,
+		// ReadCapacity:  jsii.Number(1),
+		// WriteCapacity: jsii.Number(1),
 	})
 
 	// Create ECR repository
