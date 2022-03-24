@@ -39,10 +39,20 @@ Run the following command to launch rest server in docker container:<br />
 You can POST user comment by command:
   ```sh
   curl -v -X POST http://127.0.0.1:8387/put -H 'Content-Type: application/json' -d '{"name": "Cow","comment": "sample comment!","chatRoom": "123"}'
+  Status Code: 201 Created
   ```
 Or you can QUERY user comments by command:
   ```sh
   curl -v http://127.0.0.1:8387/get?chatroom=123
+  Status Code: 200 OK
+  [
+    {
+      "name"   :"Cow",
+      "comment":"sample comment!",
+      "time"   :"2022-03-23T22:59:04+08:00"
+    },
+    ...
+  ]
   ```
   
   
