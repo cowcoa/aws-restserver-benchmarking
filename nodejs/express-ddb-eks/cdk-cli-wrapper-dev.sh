@@ -28,8 +28,17 @@ fi
 
 # CDK command.
 $SHELL_PATH/cdk-cli-wrapper.sh ${CDK_ACC} ${CDK_REGION} "$@"
+cdk_exec_result=$?
 
 # CDK command post-process.
-if [ "$CDK_CMD" == "destroy" ]; then
+if [ $cdk_exec_result -eq 0 ] && [ "$CDK_CMD" == "destroy" ]; then
     rm -rf $SHELL_PATH/cdk.out/
+
+    nodejs_express_ddb_repo="$(jq -r .context.imageRepoName ${SHELL_PATH}/cdk.json)"
+    aws ecr describe-repositories --repository-names $nodejs_express_ddb_repo --region $CDK_REGION &> /dev/null
+    result=$?
+    if [ $result -eq 0 ]; then
+        echo "Delete image repository..."
+        aws ecr delete-repository --repository-name $nodejs_express_ddb_repo --region $CDK_REGION --force
+    fi
 fi
