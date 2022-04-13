@@ -21,6 +21,3 @@ cdk.context.json
 
 # Nodejs modules
 */node_modules
-
-# CDK8s imports
-imports
