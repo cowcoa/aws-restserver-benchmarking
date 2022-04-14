@@ -89,14 +89,14 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 	clusterInfo := ClusterInfo{}
 	json.Unmarshal(clusterInfoFile, &clusterInfo)
 
-	// Import cluster.
-	cluster := awseks.Cluster_FromClusterAttributes(stack, jsii.String("mycluster"), &awseks.ClusterAttributes{
+	// Import eks cluster.
+	cluster := awseks.Cluster_FromClusterAttributes(stack, jsii.String("EKSCluster"), &awseks.ClusterAttributes{
 		ClusterName:                     jsii.String(clusterInfo.ClusterName),
 		ClusterCertificateAuthorityData: jsii.String(clusterInfo.CertificateAuthorityData),
 		ClusterEndpoint:                 jsii.String(clusterInfo.ApiServerEndpoint),
 		ClusterSecurityGroupId:          jsii.String(clusterInfo.ClusterSecurityGroupId),
 		OpenIdConnectProvider:           awsiam.OpenIdConnectProvider_FromOpenIdConnectProviderArn(stack, jsii.String("idp"), jsii.String(clusterInfo.OidcIdpArn)),
-		Vpc: awsec2.Vpc_FromLookup(stack, jsii.String("vpc"), &awsec2.VpcLookupOptions{
+		Vpc: awsec2.Vpc_FromLookup(stack, jsii.String("VPC"), &awsec2.VpcLookupOptions{
 			IsDefault: jsii.Bool(false),
 			Region:    jsii.String(clusterInfo.Region),
 			VpcId:     jsii.String(clusterInfo.VpcId),
@@ -108,33 +108,118 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 	app := cdk8s.NewApp(nil)
 	chart := cdk8s.NewChart(app, jsii.String("CDK8s-Chart"), nil)
 
+	nsName := "restbenchmark"
+	appName := "nodejs-express-ddb"
+	saName := appName
+	imageUri := *stack.Account() + ".dkr.ecr." + *stack.Region() + ".amazonaws.com/" + config.EcrRepoName(stack) + ":latest"
+	appLabel := map[string]*string{
+		"app": jsii.String(appName),
+	}
+	const servicePort = 8783
+	const containerPort = 8387
+	// const nodePort = 30037
+
+	// Create app service account role.
+	saRole := awsiam.NewRole(stack, jsii.String("SARole"), &awsiam.RoleProps{
+		RoleName: jsii.String(*stack.StackName() + "-SARole"),
+		AssumedBy: awsiam.NewWebIdentityPrincipal(cluster.OpenIdConnectProvider().OpenIdConnectProviderArn(), &map[string]interface{}{
+			"StringEquals": awscdk.NewCfnJson(stack, jsii.String("CfnJson-SARole"), &awscdk.CfnJsonProps{
+				Value: map[string]string{
+					*cluster.OpenIdConnectProvider().OpenIdConnectProviderIssuer() + ":aud": "sts.amazonaws.com",
+					*cluster.OpenIdConnectProvider().OpenIdConnectProviderIssuer() + ":sub": "system:serviceaccount:" + nsName + ":" + saName,
+				},
+			}),
+		}),
+		ManagedPolicies: &[]awsiam.IManagedPolicy{
+			awsiam.ManagedPolicy_FromAwsManagedPolicyName(jsii.String("AmazonDynamoDBFullAccess")),
+		},
+	})
+
+	// Create k8s namespace
 	ns := k8s.NewKubeNamespace(chart, jsii.String("K8s-Namespace"), &k8s.KubeNamespaceProps{
 		Metadata: &k8s.ObjectMeta{
-			Name: jsii.String("test2"),
+			Name: jsii.String(nsName),
 		},
 	})
 
-	cfgmap := cdk8splus21.NewConfigMap(chart, jsii.String("K8s-ConfigMap"), &cdk8splus21.ConfigMapProps{
+	// Create k8s service account
+	sa := cdk8splus21.NewServiceAccount(chart, jsii.String("K8s-ServiceAccount"), &cdk8splus21.ServiceAccountProps{
 		Metadata: &cdk8s.ApiObjectMetadata{
-			Name:      jsii.String("test2-cfgmap"),
-			Namespace: jsii.String("test2"),
-			Labels: &map[string]*string{
-				"app": jsii.String("test2"),
+			Name:      jsii.String(saName),
+			Namespace: jsii.String(nsName),
+			Labels:    &appLabel,
+			Annotations: &map[string]*string{
+				"eks.amazonaws.com/role-arn": saRole.RoleArn(),
 			},
 		},
+	})
+	sa.ApiObject().AddDependency(ns)
+
+	// Create k8s config map
+	cfgMap := cdk8splus21.NewConfigMap(chart, jsii.String("K8s-ConfigMap"), &cdk8splus21.ConfigMapProps{
+		Metadata: &cdk8s.ApiObjectMetadata{
+			Name:      jsii.String(appName + "-cfgmap"),
+			Namespace: jsii.String(nsName),
+			Labels:    &appLabel,
+		},
 		Data: &map[string]*string{
-			"deploymentRegion": jsii.String("ap-northeast-1"),
-			"tableName":        jsii.String("RESTBenchmark-ChatTable"),
-			"gsiName":          jsii.String("ChatTableGSI"),
-			"testName":         jsii.String("Test"),
-			"myZZZ":            jsii.String("Hahaha"),
-			"finally_finished": jsii.String("wahaha"),
+			"deploymentRegion": jsii.String(clusterInfo.Region),
+			"tableName":        jsii.String(config.TableName(stack)),
+			"gsiName":          jsii.String(config.GsiName(stack)),
 		},
 	})
+	cfgMap.ApiObject().AddDependency(sa)
 
-	cfgmap.ApiObject().AddDependency(ns)
+	// Create k8s deployment
+	deploy := cdk8splus21.NewDeployment(chart, jsii.String("K8s-Deployment"), &cdk8splus21.DeploymentProps{
+		Metadata: &cdk8s.ApiObjectMetadata{
+			Name:      jsii.String(appName + "-deployment"),
+			Namespace: jsii.String(nsName),
+			Labels:    &appLabel,
+		},
+		Containers: &[]*cdk8splus21.ContainerProps{
+			{
+				Name:  jsii.String(appName),
+				Image: jsii.String(imageUri),
+				Port:  jsii.Number(containerPort),
+				Env: &map[string]cdk8splus21.EnvValue{
+					"AWS_REGION":     cdk8splus21.EnvValue_FromConfigMap(cfgMap, jsii.String("deploymentRegion"), nil),
+					"DDB_TABLE_NAME": cdk8splus21.EnvValue_FromConfigMap(cfgMap, jsii.String("tableName"), nil),
+					"DDB_GSI_NAME":   cdk8splus21.EnvValue_FromConfigMap(cfgMap, jsii.String("gsiName"), nil),
+				},
+			},
+		},
+		ServiceAccount: cdk8splus21.ServiceAccount_FromServiceAccountName(jsii.String(*sa.Name())),
+		PodMetadata: &cdk8s.ApiObjectMetadata{
+			Namespace: jsii.String(nsName),
+			Labels:    &appLabel,
+		},
+		DefaultSelector: jsii.Bool(true),
+		Replicas:        jsii.Number(3),
+	})
+	deploy.ApiObject().AddDependency(cfgMap)
 
-	cluster.AddCdk8sChart(jsii.String("k8s-add-chart"), chart, &awseks.KubernetesManifestOptions{})
+	// Create k8s service
+	svc := cdk8splus21.NewService(chart, jsii.String("K8s-Service"), &cdk8splus21.ServiceProps{
+		Metadata: &cdk8s.ApiObjectMetadata{
+			Name:      jsii.String(appName + "-service"),
+			Namespace: jsii.String(nsName),
+			Labels:    &appLabel,
+		},
+		Ports: &[]*cdk8splus21.ServicePort{
+			{
+				Name:       jsii.String(appName),
+				Port:       jsii.Number(servicePort),
+				TargetPort: jsii.Number(containerPort),
+			},
+		},
+		Type: cdk8splus21.ServiceType_CLUSTER_IP,
+	})
+	svc.AddSelector(jsii.String("app"), jsii.String(appName))
+	svc.ApiObject().AddDependency(deploy)
+
+	// Add chart to cluster.
+	cluster.AddCdk8sChart(jsii.String("EKSCDK8sChart"), chart, nil)
 
 	return stack
 }

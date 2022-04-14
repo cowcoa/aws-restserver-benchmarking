@@ -25,6 +25,9 @@ fi
 if [ ! -d "${SHELL_PATH}/imports/k8s" ]; then
     npx cdk8s import k8s@1.21.0 -l go
 fi
+if [ "$CDK_CMD" == "deploy" ]; then
+    ${SHELL_PATH}/app/deploy_image.sh
+fi
 
 # CDK command.
 $SHELL_PATH/cdk-cli-wrapper.sh ${CDK_ACC} ${CDK_REGION} "$@"
