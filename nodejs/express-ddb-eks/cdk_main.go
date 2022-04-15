@@ -187,6 +187,26 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 					"DDB_TABLE_NAME": cdk8splus21.EnvValue_FromConfigMap(cfgMap, jsii.String("tableName"), nil),
 					"DDB_GSI_NAME":   cdk8splus21.EnvValue_FromConfigMap(cfgMap, jsii.String("gsiName"), nil),
 				},
+				/*
+					Liveness: cdk8splus21.Probe_FromCommand(&[]*string{
+						jsii.String("/bin/sh"),
+						jsii.String("-c"),
+						jsii.String("nc -z localhost " + strconv.Itoa(containerPort)),
+					}, &cdk8splus21.CommandProbeOptions{
+						InitialDelaySeconds: cdk8s.Duration_Millis(jsii.Number(3000)),
+						PeriodSeconds:       cdk8s.Duration_Millis(jsii.Number(5000)),
+					}),
+				*/
+				Resources: &cdk8splus21.Resources{
+					Cpu: &cdk8splus21.CpuResources{
+						Limit:   cdk8splus21.Cpu_Millis(jsii.Number(1000)),
+						Request: cdk8splus21.Cpu_Millis(jsii.Number(500)),
+					},
+					Memory: &cdk8splus21.MemoryResources{
+						Limit:   cdk8s.Size_Mebibytes(jsii.Number(500)),
+						Request: cdk8s.Size_Mebibytes(jsii.Number(250)),
+					},
+				},
 			},
 		},
 		ServiceAccount: cdk8splus21.ServiceAccount_FromServiceAccountName(jsii.String(*sa.Name())),
@@ -208,15 +228,50 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 		},
 		Ports: &[]*cdk8splus21.ServicePort{
 			{
-				Name:       jsii.String(appName),
 				Port:       jsii.Number(servicePort),
 				TargetPort: jsii.Number(containerPort),
 			},
 		},
-		Type: cdk8splus21.ServiceType_CLUSTER_IP,
+		Type: cdk8splus21.ServiceType_NODE_PORT,
 	})
 	svc.AddSelector(jsii.String("app"), jsii.String(appName))
 	svc.ApiObject().AddDependency(deploy)
+
+	// Create k8s ingress
+	ingress := k8s.NewKubeIngress(chart, jsii.String("K8s-Ingress"), &k8s.KubeIngressProps{
+		Metadata: &k8s.ObjectMeta{
+			Name:      jsii.String(appName + "-ingress"),
+			Namespace: &nsName,
+			Labels:    &appLabel,
+			Annotations: &map[string]*string{
+				// All lowercase, no more than 32 chars length.
+				"alb.ingress.kubernetes.io/load-balancer-name": jsii.String("eks-alb-ingress"),
+				// Ingress Core Settings
+				"alb.ingress.kubernetes.io/scheme": jsii.String("internet-facing"),
+				// Health Check Settings
+				"alb.ingress.kubernetes.io/healthcheck-protocol":         jsii.String("HTTP"),
+				"alb.ingress.kubernetes.io/healthcheck-port":             jsii.String("traffic-port"),
+				"alb.ingress.kubernetes.io/healthcheck-path":             jsii.String("/health"),
+				"alb.ingress.kubernetes.io/healthcheck-interval-seconds": jsii.String("15"),
+				"alb.ingress.kubernetes.io/healthcheck-timeout-seconds":  jsii.String("5"),
+				"alb.ingress.kubernetes.io/success-codes":                jsii.String("200"),
+				"alb.ingress.kubernetes.io/healthy-threshold-count":      jsii.String("2"),
+				"alb.ingress.kubernetes.io/unhealthy-threshold-count":    jsii.String("2"),
+			},
+		},
+		Spec: &k8s.IngressSpec{
+			IngressClassName: jsii.String("alb"),
+			DefaultBackend: &k8s.IngressBackend{
+				Service: &k8s.IngressServiceBackend{
+					Name: svc.Name(),
+					Port: &k8s.ServiceBackendPort{
+						Number: jsii.Number(servicePort),
+					},
+				},
+			},
+		},
+	})
+	ingress.AddDependency(svc)
 
 	// Add chart to cluster.
 	cluster.AddCdk8sChart(jsii.String("EKSCDK8sChart"), chart, nil)

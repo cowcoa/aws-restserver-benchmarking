@@ -144,6 +144,11 @@ router.get('/get', async (req, res, next) => {
     }
 });
 
+// GET /health resource processing function.
+router.get('/health', async (req, res, next) => {
+    res.status(200).send();
+});
+
 // Default error handler
 /*
 app.use(function (err, req, res, next) {
@@ -165,9 +170,11 @@ const server = app.listen(HTTP_PORT, () => {
     console.log("Server running on port %PORT%".replace("%PORT%",HTTP_PORT));
 });
 
+/*
 setInterval(() => server.getConnections(
     (err, connections) => console.log(`${connections} connections currently open`)
 ), 1000);
+*/
 
 process.on('SIGTERM', shutDown);
 process.on('SIGINT', shutDown);
