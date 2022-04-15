@@ -25,7 +25,7 @@
       "aws-cn"
     ],
     "stackName": "RESTBenchmark-NodeExpressDDB-EKS",
-    "deploymentRegion": "ap-northeast-1",
+    "deploymentRegion": "",
     "tableName": "RESTBenchmark-ChatTable-EKS",
     "gsiName": "ChatTableGSI",
     "imageRepoName": "restbenchmark-nodeexpressddb-eks"
