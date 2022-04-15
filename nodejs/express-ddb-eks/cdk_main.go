@@ -244,7 +244,7 @@ func NewNodejsExpressDdbStack(scope constructs.Construct, id string, props *Node
 			Namespace: &nsName,
 			Labels:    &appLabel,
 			Annotations: &map[string]*string{
-				// All lowercase, no more than 32 chars length.
+				// All lowercase, no longer than 32 characters.
 				"alb.ingress.kubernetes.io/load-balancer-name": jsii.String("eks-alb-ingress"),
 				// Ingress Core Settings
 				"alb.ingress.kubernetes.io/scheme": jsii.String("internet-facing"),
