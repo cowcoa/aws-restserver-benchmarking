@@ -1,25 +1,12 @@
 ## Simple REST server PoC (Node.js + Express + DynamoDB)
-Deploy and run this PoC on your x86_64 or arm64 EC2 instance.<br />
+Deploy and run this PoC on your x86_64 or arm64 EKS cluster.<br />
 
-## Deployment
-Run the following command to deploy AWS resources by CDK Toolkit:<br />
-  ```sh
-  cdk-cli-wrapper-dev.sh deploy
-  ```
-If all goes well, you will see the following output:<br />
-  ```sh
-  Outputs:
-  RESTBenchmark-NodeExpressDDB.EcrRepositoryName = restbenchmark-nodeexpressddb
-  RESTBenchmark-NodeExpressDDB.EcrRepositoryUri = 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/restbenchmark-nodeexpressddb
-  Stack ARN:
-  arn:aws:cloudformation:ap-northeast-2:123456789012:stack/RESTBenchmark-NodeExpressDDB/52be8470-aab6-11ec-a9b8-0656cd628778
-  
-  ✨  Total time: 5.24s
-  ```
-You can also clean up the deployment by running command:<br />
-  ```sh
-  cdk-cli-wrapper-dev.sh destroy
-  ```
+## Prerequisites
+1. [Init](https://github.com/cowcoa/aws-restserver-benchmarking) - Follow this to initialize the development environment.
+2. Install CDK8s Toolkit:
+    ```sh
+    npm install -g cdk8s-cli
+    ```
 
 ## Build Docker image and Push to ECR repository
 Run the following command to build docker image:<br />
@@ -27,7 +14,46 @@ Run the following command to build docker image:<br />
   cd app/
   ./deploy_image.sh
   ```
-This script will help you build an image of your Node App and automatically push it to the ECR repository created in the previous step.
+This script will help you build an image of your Node App and push it to the ECR repository created automatically.
+
+## Deployment
+Generate low-level (L1) constructs for Kubernetes API objects and Custom Resources (CRDs):<br />
+  ```sh
+  cdk8s import k8s@1.21.0 -l go
+  ```
+Export the following information from your EKS cluster and fill in the cluster-info.json file:<br />
+| Name | Example Value |
+| ------ | ------ |
+| clusterSecurityGroupId | sg-0cb7ee5b03a23bb74 |
+| apiServerEndpoint | https://AB123D8E12345CD123AA92855957B4F8.gr7.ap-northeast-1.eks.amazonaws.com |
+| vpcId | vpc-0445143cc39ee48f6 |
+| clusterName | CDKGoExample-EKSCluster |
+| certificateAuthorityData | LS0tLS1CRUdJTi...BDRVJUSU0tCg== |
+| kubectlRoleArn | arn:aws:iam::123456789012:role/CDKGoExample-EKSCluster-EksClusterCreationRole75AA-1UKOP8JQ8R9DN |
+| region | ap-northeast-1 |
+| oidcIdpArn | arn:aws:iam::123456789012:oidc-provider/oidc.eks.ap-northeast-1.amazonaws.com/id/AB123D8E12345CD123AA92855957B4F8 |
+
+If you don't know how to do it, you can refer to [this].
+
+Run the following command to deploy AWS resources by CDK Toolkit:<br />
+  ```sh
+  cdk-cli-wrapper-dev.sh deploy
+  ```
+If all goes well, you will see the following output:<br />
+  ```sh
+  ✅  RESTBenchmark-NodeExpressDDB-EKS
+  
+  ✨  Deployment time: 44.65s
+  
+  Stack ARN:
+  arn:aws:cloudformation:ap-northeast-1:123456789012:stack/RESTBenchmark-NodeExpressDDB-EKS/7794aa30-bb42-11ec-ac27-06e90b0496e1
+  
+  ✨  Total time: 48.96s
+  ```
+You can also clean up the deployment by running command:<br />
+  ```sh
+  cdk-cli-wrapper-dev.sh destroy
+  ```
 
 ## Testing
 Run the following command to launch rest server in docker container:<br />
@@ -54,5 +80,6 @@ Or you can QUERY user comments by command:
     ...
   ]
   ```
-  
+
+[this]: <https://github.com/cowcoa/aws-cdk-go-examples/tree/master/eks/arm64_cluster/>
   
