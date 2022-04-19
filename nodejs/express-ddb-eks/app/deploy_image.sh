@@ -21,21 +21,13 @@ if [ $result -ne 0 ]; then
     aws ecr create-repository --repository-name $nodejs_express_ddb_repo --region $deployment_region
 fi
 
-echo "Build docker image..."
-docker build -t $nodejs_express_ddb_repo $SHELL_PATH
-
-image_tag="$(echo $(date '+%Y.%m.%d.%H%M%S' -d '+8 hours'))"
-
-echo "nodejs_express_ddb_repo: $nodejs_express_ddb_repo"
-echo "nodejs_express_ddb_repo_uri: $nodejs_express_ddb_repo_uri"
-
-echo "Upload docker image to ECR..."
+echo "Login to ECR..."
 DOCKER_LOGIN_CMD=$(aws ecr get-login --no-include-email --region $deployment_region)
 eval "${DOCKER_LOGIN_CMD}"
-docker tag $nodejs_express_ddb_repo:latest $nodejs_express_ddb_repo_uri:$image_tag
-docker push $nodejs_express_ddb_repo_uri:$image_tag
-docker tag $nodejs_express_ddb_repo:latest $nodejs_express_ddb_repo_uri:latest
-docker push $nodejs_express_ddb_repo_uri:latest
+
+echo "Build docker image..."
+image_tag="$(echo $(date '+%Y.%m.%d.%H%M%S' -d '+8 hours'))"
+docker buildx build --push --platform linux/arm64,linux/amd64 --tag $nodejs_express_ddb_repo_uri:latest --tag $nodejs_express_ddb_repo_uri:$image_tag ${SHELL_PATH}/.
 
 echo
 echo "Done"
