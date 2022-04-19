@@ -81,5 +81,5 @@ Or you can QUERY user comments by command:
   ]
   ```
 
-[this]: <https://github.com/cowcoa/aws-cdk-go-examples/tree/master/eks/arm64_cluster/>
+[this]: <https://github.com/cowcoa/aws-cdk-go-examples/tree/master/eks/simple-cluster/>
   
