@@ -7,6 +7,7 @@ Deploy and run this PoC on your x86_64 or arm64 EKS cluster.<br />
     ```sh
     npm install -g cdk8s-cli
     ```
+3. [Install docker buildx](https://docs.docker.com/buildx/working-with-buildx/) - You will need buildx for building multi-arch docker images.
 
 ## Build Docker image and Push to ECR repository
 Run the following command to build docker image:<br />
